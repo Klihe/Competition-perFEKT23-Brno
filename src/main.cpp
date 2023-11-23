@@ -30,20 +30,14 @@ void logValues(String label1, int emgVal1, String label2, int emgVal2) {
   Serial.print(label2);
   Serial.print(emgVal2);
   Serial.print(",");
-
-  Serial.print("Reference high:");
-  Serial.print(1000);
-  Serial.print(",");
-  Serial.print("Reference low:");
-  Serial.println(0);
 }
 
 // Init variables
 int oldEMGVal1 = 0;
 int oldEMGVal2 = 0;
 
-const int maxEMG1 = 600;
-const int maxEMG2 = 600;
+const float maxEMG1 = 200;
+const float maxEMG2 = 200;
 
 DCMotor motorA(MOT_A_DIR, MOT_A_SPEED);
 DCMotor motorB(MOT_B_DIR, MOT_B_SPEED);
@@ -54,12 +48,12 @@ void setup() {
 
   // Set the motor directions
   motorA.setDir(FORWARD);
-  motorB.setDir(FORWARD);
+  motorB.setDir(BACKWARD);
 }
  
 void loop() {
   // Read sensor values
-  int rawEMGVal1 = analogRead(EMG1);
+  int rawEMGVal1 = analogRead(EMG1) - 20;
   int rawEMGVal2 = analogRead(EMG2);
 
   int smoothedEMGVal1 = (rawEMGVal1 * 0.25) + (oldEMGVal1 * 0.75);
@@ -69,13 +63,23 @@ void loop() {
   oldEMGVal1 = smoothedEMGVal1;
   oldEMGVal2 = smoothedEMGVal2;
 
+  // Convert them to motor speeds
+  int convertedVal1 = (1.0 * smoothedEMGVal1 / maxEMG1) * 255;
+  int convertedVal2 = (1.0 * smoothedEMGVal2 / maxEMG2) * 255;
+
+  if (smoothedEMGVal1 > 200) {
+    convertedVal1 = 255;
+  }
+  if (smoothedEMGVal2 > 200) {
+    convertedVal2 = 255;
+  }
+
   // Log the values
   logValues("EMG_1_smooth:", smoothedEMGVal1, "EMG_2_smooth:", smoothedEMGVal2);
   logValues("EMG_1:", rawEMGVal1, "EMG_2:", rawEMGVal2);
-
-  // Convert them to motor speeds
-  int convertedVal1 = (smoothedEMGVal1 / maxEMG1) * 255;
-  int convertedVal2 = (smoothedEMGVal2 / maxEMG2) * 255;
+  logValues("Reference_high:", 1000, "Reference_low:", 0);
+  logValues("MotorA:", convertedVal1, "MotorB:", convertedVal2);
+  Serial.println(" ");
 
   // Pass the speeds to the motors
   motorA.setSpeed(convertedVal1);
